@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1py0zsm" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.11.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.19.0">
+  <bpmn:process id="Reklamacje_ujednolicony_2007" name="Reklamacje ujednolicony" isExecutable="true" camunda:historyTimeToLive="2000">
+    <bpmn:startEvent id="StartReklamacja">
+      <bpmn:outgoing>FlowStartDoWystawienie</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="TaskWystawienieDokumentu" name="Wystawienie dokumentu">
+      <bpmn:incoming>FlowStartDoWystawienie</bpmn:incoming>
+      <bpmn:outgoing>FlowWystawienieDoPotwierdzenie</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowStartDoWystawienie" sourceRef="StartReklamacja" targetRef="TaskWystawienieDokumentu" />
+    <bpmn:task id="TaskPotwierdzenieDokumentu" name="Potwierdzenie dokumentu RLS">
+      <bpmn:incoming>FlowWystawienieDoPotwierdzenie</bpmn:incoming>
+      <bpmn:outgoing>FlowPotwierdzenieDoDokumentacjaGateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowWystawienieDoPotwierdzenie" sourceRef="TaskWystawienieDokumentu" targetRef="TaskPotwierdzenieDokumentu" />
+    <bpmn:exclusiveGateway id="GatewayDokumentacja" name="Czy konieczne jest uzupełnienie dokumentacji?" default="FlowDokumentacjaGatewayDoOdrzuconaGateway">
+      <bpmn:incoming>FlowPotwierdzenieDoDokumentacjaGateway</bpmn:incoming>
+      <bpmn:outgoing>FlowDokumentacjaGatewayDoUzupelnienie</bpmn:outgoing>
+      <bpmn:outgoing>FlowDokumentacjaGatewayDoOdrzuconaGateway</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="FlowPotwierdzenieDoDokumentacjaGateway" sourceRef="TaskPotwierdzenieDokumentu" targetRef="GatewayDokumentacja" />
+    <bpmn:task id="TaskUzupelnienieDokumentacji" name="Uzupełnienie dokumentacji lub korekta faktury">
+      <bpmn:incoming>FlowDokumentacjaGatewayDoUzupelnienie</bpmn:incoming>
+      <bpmn:outgoing>FlowUzupelnienieDoOdrzuconaGateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowDokumentacjaGatewayDoUzupelnienie" name="TAK" sourceRef="GatewayDokumentacja" targetRef="TaskUzupelnienieDokumentacji">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{dokumentacja==true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:exclusiveGateway id="GatewayOdrzucona" name="Czy reklamację należy odrzucić?" default="FlowOdrzuconaGatewayDoKlientGateway">
+      <bpmn:incoming>FlowDokumentacjaGatewayDoOdrzuconaGateway</bpmn:incoming>
+      <bpmn:incoming>FlowUzupelnienieDoOdrzuconaGateway</bpmn:incoming>
+      <bpmn:outgoing>FlowOdrzuconaGatewayDoOdrzucenie</bpmn:outgoing>
+      <bpmn:outgoing>FlowOdrzuconaGatewayDoKlientGateway</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="FlowDokumentacjaGatewayDoOdrzuconaGateway" name="NIE" sourceRef="GatewayDokumentacja" targetRef="GatewayOdrzucona" />
+    <bpmn:sequenceFlow id="FlowUzupelnienieDoOdrzuconaGateway" sourceRef="TaskUzupelnienieDokumentacji" targetRef="GatewayOdrzucona" />
+    <bpmn:task id="TaskOdrzucenie" name="Odrzucenie reklamacji">
+      <bpmn:incoming>FlowOdrzuconaGatewayDoOdrzucenie</bpmn:incoming>
+      <bpmn:outgoing>FlowOdrzucenieDoZamkniecie</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowOdrzuconaGatewayDoOdrzucenie" name="TAK" sourceRef="GatewayOdrzucona" targetRef="TaskOdrzucenie">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{odrzucona==true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:task id="TaskZamkniecieOdrzuconej" name="Zamknięcie reklamacji">
+      <bpmn:incoming>FlowOdrzucenieDoZamkniecie</bpmn:incoming>
+      <bpmn:outgoing>FlowZamkniecieOdrzuconejDoEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowOdrzucenieDoZamkniecie" sourceRef="TaskOdrzucenie" targetRef="TaskZamkniecieOdrzuconej" />
+    <bpmn:endEvent id="EndOdrzucona">
+      <bpmn:incoming>FlowZamkniecieOdrzuconejDoEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="FlowZamkniecieOdrzuconejDoEnd" sourceRef="TaskZamkniecieOdrzuconej" targetRef="EndOdrzucona" />
+    <bpmn:exclusiveGateway id="GatewayKlient" name="Czy towar należy odebrać od klienta?" default="FlowKlientGatewayDoWysylkaGateway">
+      <bpmn:incoming>FlowOdrzuconaGatewayDoKlientGateway</bpmn:incoming>
+      <bpmn:outgoing>FlowKlientGatewayDoWOdbiorze</bpmn:outgoing>
+      <bpmn:outgoing>FlowKlientGatewayDoWysylkaGateway</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="FlowOdrzuconaGatewayDoKlientGateway" name="NIE" sourceRef="GatewayOdrzucona" targetRef="GatewayKlient" />
+    <bpmn:task id="TaskWOdbiorzeOdKlienta" name="W odbiorze od klienta">
+      <bpmn:incoming>FlowKlientGatewayDoWOdbiorze</bpmn:incoming>
+      <bpmn:outgoing>FlowWOdbiorzeDoKorekta</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowKlientGatewayDoWOdbiorze" name="TAK" sourceRef="GatewayKlient" targetRef="TaskWOdbiorzeOdKlienta">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{klient==true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:task id="TaskKorektaFaktury" name="Korekta faktury">
+      <bpmn:incoming>FlowWOdbiorzeDoKorekta</bpmn:incoming>
+      <bpmn:outgoing>FlowKorektaDoWysylkaGateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowWOdbiorzeDoKorekta" sourceRef="TaskWOdbiorzeOdKlienta" targetRef="TaskKorektaFaktury" />
+    <bpmn:exclusiveGateway id="GatewayWysylka" name="Czy towar należy wysłać do klienta?" default="FlowWysylkaGatewayDoDostepnyGateway">
+      <bpmn:incoming>FlowKlientGatewayDoWysylkaGateway</bpmn:incoming>
+      <bpmn:incoming>FlowKorektaDoWysylkaGateway</bpmn:incoming>
+      <bpmn:outgoing>FlowKlientGatewayDoZamkniecie</bpmn:outgoing>
+      <bpmn:outgoing>FlowWysylkaGatewayDoDostepnyGateway</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="FlowKlientGatewayDoWysylkaGateway" name="NIE" sourceRef="GatewayKlient" targetRef="GatewayWysylka" />
+    <bpmn:sequenceFlow id="FlowKorektaDoWysylkaGateway" sourceRef="TaskKorektaFaktury" targetRef="GatewayWysylka" />
+    <bpmn:task id="TaskZamkniecieBezWysylki" name="Zamknięcie reklamacji">
+      <bpmn:incoming>FlowKlientGatewayDoZamkniecie</bpmn:incoming>
+      <bpmn:outgoing>FlowZamknieciePoOdbiorzeDoEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowKlientGatewayDoZamkniecie" name="NIE" sourceRef="GatewayWysylka" targetRef="TaskZamkniecieBezWysylki">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{wysylka==false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:exclusiveGateway id="GatewayDostepny" name="Czy towar jest dostępny?" default="FlowDostepnyGatewayDoPrzygotowana">
+      <bpmn:incoming>FlowWysylkaGatewayDoDostepnyGateway</bpmn:incoming>
+      <bpmn:outgoing>FlowDostepnyGatewayDoZamowiono</bpmn:outgoing>
+      <bpmn:outgoing>FlowDostepnyGatewayDoPrzygotowana</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="FlowWysylkaGatewayDoDostepnyGateway" name="TAK" sourceRef="GatewayWysylka" targetRef="GatewayDostepny" />
+    <bpmn:task id="TaskZamowionoUProducenta" name="Zamówiono u producenta">
+      <bpmn:incoming>FlowDostepnyGatewayDoZamowiono</bpmn:incoming>
+      <bpmn:outgoing>FlowZamowionoDoPrzygotowana</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowDostepnyGatewayDoZamowiono" name="NIE" sourceRef="GatewayDostepny" targetRef="TaskZamowionoUProducenta">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{dostepny==false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:task id="TaskPrzygotowanaDoWysylki" name="Przygotowana do wysyłki">
+      <bpmn:incoming>FlowDostepnyGatewayDoPrzygotowana</bpmn:incoming>
+      <bpmn:incoming>FlowZamowionoDoPrzygotowana</bpmn:incoming>
+      <bpmn:outgoing>FlowPrzygotowanaDoWyslana</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowDostepnyGatewayDoPrzygotowana" name="TAK" sourceRef="GatewayDostepny" targetRef="TaskPrzygotowanaDoWysylki" />
+    <bpmn:task id="TaskWyslana" name="Wysłana">
+      <bpmn:incoming>FlowPrzygotowanaDoWyslana</bpmn:incoming>
+      <bpmn:outgoing>FlowWyslanaDoZamkniecie</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowPrzygotowanaDoWyslana" sourceRef="TaskPrzygotowanaDoWysylki" targetRef="TaskWyslana" />
+    <bpmn:task id="TaskZamknieciePoWysylce" name="Zamknięcie reklamacji">
+      <bpmn:incoming>FlowWyslanaDoZamkniecie</bpmn:incoming>
+      <bpmn:outgoing>FlowZamknieciePoWysylceDoEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowWyslanaDoZamkniecie" sourceRef="TaskWyslana" targetRef="TaskZamknieciePoWysylce" />
+    <bpmn:endEvent id="EndPoWysylce">
+      <bpmn:incoming>FlowZamknieciePoWysylceDoEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="FlowZamknieciePoWysylceDoEnd" sourceRef="TaskZamknieciePoWysylce" targetRef="EndPoWysylce" />
+    <bpmn:endEvent id="EndBezWysylki">
+      <bpmn:incoming>FlowZamknieciePoOdbiorzeDoEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="FlowZamknieciePoOdbiorzeDoEnd" sourceRef="TaskZamkniecieBezWysylki" targetRef="EndBezWysylki" />
+    <bpmn:sequenceFlow id="FlowZamowionoDoPrzygotowana" sourceRef="TaskZamowionoUProducenta" targetRef="TaskPrzygotowanaDoWysylki" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Reklamacje_ujednolicony_2007">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartReklamacja">
+        <dc:Bounds x="179" y="159" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1p6lunl_di" bpmnElement="TaskWystawienieDokumentu">
+        <dc:Bounds x="270" y="137" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0776lwb_di" bpmnElement="TaskPotwierdzenieDokumentu">
+        <dc:Bounds x="430" y="137" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0zns3yh_di" bpmnElement="GatewayDokumentacja" isMarkerVisible="true">
+        <dc:Bounds x="595" y="152" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="579" y="209" width="82" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0mnrwv6_di" bpmnElement="TaskUzupelnienieDokumentacji">
+        <dc:Bounds x="700" y="40" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1dhb19x_di" bpmnElement="GatewayOdrzucona" isMarkerVisible="true">
+        <dc:Bounds x="935" y="152" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="995" y="163" width="83" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0qn3gxl_di" bpmnElement="TaskOdrzucenie">
+        <dc:Bounds x="1100" y="40" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0at5on5_di" bpmnElement="TaskZamkniecieOdrzuconej">
+        <dc:Bounds x="1320" y="40" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1trt7b9_di" bpmnElement="EndOdrzucona">
+        <dc:Bounds x="1542" y="62" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0r29kb5_di" bpmnElement="GatewayKlient" isMarkerVisible="true">
+        <dc:Bounds x="1105" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1165" y="250" width="84" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1bfjyfs_di" bpmnElement="TaskWOdbiorzeOdKlienta">
+        <dc:Bounds x="1260" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1wz0n81_di" bpmnElement="TaskKorektaFaktury">
+        <dc:Bounds x="1490" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1fotn5x_di" bpmnElement="GatewayWysylka" isMarkerVisible="true">
+        <dc:Bounds x="1675" y="355" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1595" y="386" width="89" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0znqjn0_di" bpmnElement="GatewayDostepny" isMarkerVisible="true">
+        <dc:Bounds x="1865" y="355" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1925" y="366" width="71" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1nuxgju_di" bpmnElement="TaskPrzygotowanaDoWysylki">
+        <dc:Bounds x="2040" y="410" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0miofj9_di" bpmnElement="TaskWyslana">
+        <dc:Bounds x="2270" y="410" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1d0xqlh_di" bpmnElement="TaskZamknieciePoWysylce">
+        <dc:Bounds x="2500" y="410" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1xx74sz_di" bpmnElement="EndPoWysylce">
+        <dc:Bounds x="2732" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_16l5lj3_di" bpmnElement="TaskZamkniecieBezWysylki">
+        <dc:Bounds x="1800" y="540" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1ytmc4a_di" bpmnElement="EndBezWysylki">
+        <dc:Bounds x="2002" y="562" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1kd2qm0_di" bpmnElement="TaskZamowionoUProducenta">
+        <dc:Bounds x="2040" y="230" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_13d5q2v_di" bpmnElement="FlowStartDoWystawienie">
+        <di:waypoint x="215" y="177" />
+        <di:waypoint x="270" y="177" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0dtdcal_di" bpmnElement="FlowWystawienieDoPotwierdzenie">
+        <di:waypoint x="370" y="177" />
+        <di:waypoint x="430" y="177" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ue4mo4_di" bpmnElement="FlowPotwierdzenieDoDokumentacjaGateway">
+        <di:waypoint x="530" y="177" />
+        <di:waypoint x="595" y="177" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ormtvf_di" bpmnElement="FlowDokumentacjaGatewayDoUzupelnienie">
+        <di:waypoint x="620" y="152" />
+        <di:waypoint x="620" y="80" />
+        <di:waypoint x="700" y="80" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="624" y="113" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06j1jmh_di" bpmnElement="FlowDokumentacjaGatewayDoOdrzuconaGateway">
+        <di:waypoint x="645" y="177" />
+        <di:waypoint x="935" y="177" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="781" y="159" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ftrmyk_di" bpmnElement="FlowUzupelnienieDoOdrzuconaGateway">
+        <di:waypoint x="800" y="80" />
+        <di:waypoint x="960" y="80" />
+        <di:waypoint x="960" y="152" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1pstea6_di" bpmnElement="FlowOdrzuconaGatewayDoOdrzucenie">
+        <di:waypoint x="960" y="152" />
+        <di:waypoint x="960" y="80" />
+        <di:waypoint x="1100" y="80" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="964" y="113" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0p4wspi_di" bpmnElement="FlowOdrzucenieDoZamkniecie">
+        <di:waypoint x="1200" y="80" />
+        <di:waypoint x="1320" y="80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_16v5x5n_di" bpmnElement="FlowZamkniecieOdrzuconejDoEnd">
+        <di:waypoint x="1420" y="80" />
+        <di:waypoint x="1542" y="80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12p5sxi_di" bpmnElement="FlowOdrzuconaGatewayDoKlientGateway">
+        <di:waypoint x="960" y="202" />
+        <di:waypoint x="960" y="270" />
+        <di:waypoint x="1105" y="270" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="966" y="233" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_16lc0j6_di" bpmnElement="FlowKlientGatewayDoWOdbiorze">
+        <di:waypoint x="1130" y="245" />
+        <di:waypoint x="1130" y="210" />
+        <di:waypoint x="1260" y="210" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1185" y="192" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1bp6car_di" bpmnElement="FlowWOdbiorzeDoKorekta">
+        <di:waypoint x="1360" y="210" />
+        <di:waypoint x="1490" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0vk0omw_di" bpmnElement="FlowKlientGatewayDoWysylkaGateway">
+        <di:waypoint x="1130" y="295" />
+        <di:waypoint x="1130" y="380" />
+        <di:waypoint x="1675" y="380" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1136" y="335" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_105lz9k_di" bpmnElement="FlowKorektaDoWysylkaGateway">
+        <di:waypoint x="1590" y="210" />
+        <di:waypoint x="1700" y="210" />
+        <di:waypoint x="1700" y="355" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1iyl1jj_di" bpmnElement="FlowKlientGatewayDoZamkniecie">
+        <di:waypoint x="1700" y="405" />
+        <di:waypoint x="1700" y="580" />
+        <di:waypoint x="1800" y="580" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1706" y="490" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1r6f1dv_di" bpmnElement="FlowWysylkaGatewayDoDostepnyGateway">
+        <di:waypoint x="1725" y="380" />
+        <di:waypoint x="1865" y="380" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1784" y="362" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_19qeqxx_di" bpmnElement="FlowDostepnyGatewayDoZamowiono">
+        <di:waypoint x="1890" y="355" />
+        <di:waypoint x="1890" y="270" />
+        <di:waypoint x="2040" y="270" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1896" y="314" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0zou1in_di" bpmnElement="FlowDostepnyGatewayDoPrzygotowana">
+        <di:waypoint x="1890" y="405" />
+        <di:waypoint x="1890" y="450" />
+        <di:waypoint x="2040" y="450" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1894" y="425" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1p0kfjt_di" bpmnElement="FlowPrzygotowanaDoWyslana">
+        <di:waypoint x="2140" y="450" />
+        <di:waypoint x="2270" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0tig5ax_di" bpmnElement="FlowWyslanaDoZamkniecie">
+        <di:waypoint x="2370" y="450" />
+        <di:waypoint x="2500" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0z6tedy_di" bpmnElement="FlowZamknieciePoWysylceDoEnd">
+        <di:waypoint x="2600" y="450" />
+        <di:waypoint x="2732" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0o8n8ir_di" bpmnElement="FlowZamknieciePoOdbiorzeDoEnd">
+        <di:waypoint x="1900" y="580" />
+        <di:waypoint x="2002" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0m3wqe6_di" bpmnElement="FlowZamowionoDoPrzygotowana">
+        <di:waypoint x="2090" y="310" />
+        <di:waypoint x="2090" y="410" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
