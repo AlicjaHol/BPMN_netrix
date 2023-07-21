@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0wm7vhq" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.11.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.19.0">
+  <bpmn:process id="proces_zamowien_uporszczony" name="Proces zamowien uproszczony" isExecutable="true" camunda:historyTimeToLive="2000">
+    <bpmn:startEvent id="StartZamowienie">
+      <bpmn:outgoing>FlowStartDoZlozenie</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="TaskZlozenie" name="Złożenie zamówienia">
+      <bpmn:incoming>FlowStartDoZlozenie</bpmn:incoming>
+      <bpmn:outgoing>FlowZlozenieDoCzescioweGateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowStartDoZlozenie" sourceRef="StartZamowienie" targetRef="TaskZlozenie" />
+    <bpmn:exclusiveGateway id="GatewayCzesciowe" name="Czy zamówienie będzie realizowane w częściach?" default="FlowCzescioweGatewayDoFakturaGateway">
+      <bpmn:incoming>FlowZlozenieDoCzescioweGateway</bpmn:incoming>
+      <bpmn:outgoing>FlowCzescioweGatewayDoPodzamowienia</bpmn:outgoing>
+      <bpmn:outgoing>FlowCzescioweGatewayDoFakturaGateway</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="FlowZlozenieDoCzescioweGateway" sourceRef="TaskZlozenie" targetRef="GatewayCzesciowe" />
+    <bpmn:task id="TaskPodzamowienia" name="Realizacja podzamówień (częściowe wydania towarów)">
+      <bpmn:incoming>FlowCzescioweGatewayDoPodzamowienia</bpmn:incoming>
+      <bpmn:outgoing>FlowPodzamowieniaDoFaktura</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowCzescioweGatewayDoPodzamowienia" name="TAK" sourceRef="GatewayCzesciowe" targetRef="TaskPodzamowienia">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{podzamowienia==true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:exclusiveGateway id="GatewayFaktura" name="Czy wystawić fakturę przed wydaniem towaru?" default="FlowFakturaGatewayDoWydanieNajpierw">
+      <bpmn:incoming>FlowCzescioweGatewayDoFakturaGateway</bpmn:incoming>
+      <bpmn:outgoing>FlowFakturaGatewayDoFakturaNajpierw</bpmn:outgoing>
+      <bpmn:outgoing>FlowFakturaGatewayDoWydanieNajpierw</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="FlowCzescioweGatewayDoFakturaGateway" name="NIE" sourceRef="GatewayCzesciowe" targetRef="GatewayFaktura" />
+    <bpmn:task id="TaskFakturaNajpierw" name="Wystawienie faktury">
+      <bpmn:incoming>FlowFakturaGatewayDoFakturaNajpierw</bpmn:incoming>
+      <bpmn:outgoing>FlowFakturaNajpierwDoWydaniePozniej</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowFakturaGatewayDoFakturaNajpierw" name="TAK" sourceRef="GatewayFaktura" targetRef="TaskFakturaNajpierw">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{faktura==true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:task id="TaskWydaniePozniej" name="Wydanie towaru">
+      <bpmn:incoming>FlowFakturaNajpierwDoWydaniePozniej</bpmn:incoming>
+      <bpmn:outgoing>FlowWydaniePozniejDoEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowFakturaNajpierwDoWydaniePozniej" sourceRef="TaskFakturaNajpierw" targetRef="TaskWydaniePozniej" />
+    <bpmn:endEvent id="EndFakturaNajpierw">
+      <bpmn:incoming>FlowWydaniePozniejDoEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="FlowWydaniePozniejDoEnd" sourceRef="TaskWydaniePozniej" targetRef="EndFakturaNajpierw" />
+    <bpmn:task id="TaskWydanieNajpierw" name="Wydanie towaru">
+      <bpmn:incoming>FlowFakturaGatewayDoWydanieNajpierw</bpmn:incoming>
+      <bpmn:outgoing>FlowWydanieNajpierwDoFakturaPozniej</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowFakturaGatewayDoWydanieNajpierw" name="NIE" sourceRef="GatewayFaktura" targetRef="TaskWydanieNajpierw" />
+    <bpmn:task id="TaskFakturaPozniej" name="Wystawienie faktury">
+      <bpmn:incoming>FlowWydanieNajpierwDoFakturaPozniej</bpmn:incoming>
+      <bpmn:outgoing>FlowFakturaPozniejDoEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="FlowWydanieNajpierwDoFakturaPozniej" sourceRef="TaskWydanieNajpierw" targetRef="TaskFakturaPozniej" />
+    <bpmn:endEvent id="EndWydanieNajpierw">
+      <bpmn:incoming>FlowFakturaPozniejDoEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="FlowFakturaPozniejDoEnd" sourceRef="TaskFakturaPozniej" targetRef="EndWydanieNajpierw" />
+    <bpmn:task id="TaskFakturaPodzamowienia" name="Wystawienie końcowej faktury">
+      <bpmn:incoming>FlowPodzamowieniaDoFaktura</bpmn:incoming>
+      <bpmn:outgoing>FlowFakturaPodzamowieniaDoEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndPodzamowienia">
+      <bpmn:incoming>FlowFakturaPodzamowieniaDoEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="FlowFakturaPodzamowieniaDoEnd" sourceRef="TaskFakturaPodzamowienia" targetRef="EndPodzamowienia" />
+    <bpmn:sequenceFlow id="FlowPodzamowieniaDoFaktura" sourceRef="TaskPodzamowienia" targetRef="TaskFakturaPodzamowienia" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="proces_zamowien_uporszczony">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartZamowienie">
+        <dc:Bounds x="179" y="279" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_08gqzfb_di" bpmnElement="TaskZlozenie">
+        <dc:Bounds x="270" y="257" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0nnw5om_di" bpmnElement="GatewayCzesciowe" isMarkerVisible="true">
+        <dc:Bounds x="425" y="272" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="410" y="329" width="81" height="53" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0i7ebtt_di" bpmnElement="GatewayFaktura" isMarkerVisible="true">
+        <dc:Bounds x="605" y="272" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="665" y="270" width="67" height="53" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1u8jtop_di" bpmnElement="TaskFakturaNajpierw">
+        <dc:Bounds x="760" y="200" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_10mn1y3_di" bpmnElement="TaskWydaniePozniej">
+        <dc:Bounds x="960" y="200" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0o00iyj_di" bpmnElement="TaskWydanieNajpierw">
+        <dc:Bounds x="760" y="370" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0cnh7gb_di" bpmnElement="TaskFakturaPozniej">
+        <dc:Bounds x="970" y="370" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_11rlenv_di" bpmnElement="EndWydanieNajpierw">
+        <dc:Bounds x="1182" y="392" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1bz7wx8_di" bpmnElement="EndFakturaNajpierw">
+        <dc:Bounds x="1182" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0mkmef8_di" bpmnElement="TaskFakturaPodzamowienia">
+        <dc:Bounds x="760" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0z178tz_di" bpmnElement="EndPodzamowienia">
+        <dc:Bounds x="1002" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_17ao5tf_di" bpmnElement="TaskPodzamowienia">
+        <dc:Bounds x="540" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1kb9i5o_di" bpmnElement="FlowStartDoZlozenie">
+        <di:waypoint x="215" y="297" />
+        <di:waypoint x="270" y="297" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_00tem8d_di" bpmnElement="FlowZlozenieDoCzescioweGateway">
+        <di:waypoint x="370" y="297" />
+        <di:waypoint x="425" y="297" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06er23i_di" bpmnElement="FlowCzescioweGatewayDoPodzamowienia">
+        <di:waypoint x="450" y="272" />
+        <di:waypoint x="450" y="120" />
+        <di:waypoint x="540" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="454" y="195" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0td03uo_di" bpmnElement="FlowCzescioweGatewayDoFakturaGateway">
+        <di:waypoint x="475" y="297" />
+        <di:waypoint x="605" y="297" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="531" y="279" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0i1grt2_di" bpmnElement="FlowFakturaGatewayDoFakturaNajpierw">
+        <di:waypoint x="630" y="272" />
+        <di:waypoint x="630" y="240" />
+        <di:waypoint x="760" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="634" y="253" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1q9ody8_di" bpmnElement="FlowFakturaGatewayDoWydanieNajpierw">
+        <di:waypoint x="630" y="322" />
+        <di:waypoint x="630" y="410" />
+        <di:waypoint x="760" y="410" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="636" y="363" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0oqvc2x_di" bpmnElement="FlowFakturaNajpierwDoWydaniePozniej">
+        <di:waypoint x="860" y="240" />
+        <di:waypoint x="960" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0pceq37_di" bpmnElement="FlowWydaniePozniejDoEnd">
+        <di:waypoint x="1060" y="240" />
+        <di:waypoint x="1182" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_101obqf_di" bpmnElement="FlowWydanieNajpierwDoFakturaPozniej">
+        <di:waypoint x="860" y="410" />
+        <di:waypoint x="970" y="410" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_09k7fsz_di" bpmnElement="FlowFakturaPozniejDoEnd">
+        <di:waypoint x="1070" y="410" />
+        <di:waypoint x="1182" y="410" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1dswv84_di" bpmnElement="FlowPodzamowieniaDoFaktura">
+        <di:waypoint x="640" y="120" />
+        <di:waypoint x="760" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0p2r836_di" bpmnElement="FlowFakturaPodzamowieniaDoEnd">
+        <di:waypoint x="860" y="120" />
+        <di:waypoint x="1002" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
